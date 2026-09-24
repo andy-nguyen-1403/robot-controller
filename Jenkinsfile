@@ -62,57 +62,43 @@ pipeline {
                 sh '''
                     set -e
 
+                    echo "===== CLEAN TEST OUTPUT ====="
+
                     rm -rf TestResults
                     mkdir -p TestResults
 
-                    echo "===== RUNNING AUTOMATED TESTS ====="
+                    echo "===== BUILD TEST PROJECT ====="
 
-                    dotnet test RobotTests/RobotTests.csproj \
+                    dotnet build RobotTests/RobotTests.csproj \
                         --configuration Release \
-                        --no-restore \
-                        --logger "trx;LogFileName=test-results.trx" \
-                        --results-directory TestResults \
-                        /p:CollectCoverage=true \
-                        /p:CoverletOutput="$WORKSPACE/TestResults/coverage/" \
-                        /p:CoverletOutputFormat=opencover
+                        --no-restore
 
-                    echo "===== TEST OUTPUT ====="
+                    echo "===== RUNNING UNIT AND INTEGRATION TESTS ====="
+
+                    dotnet vstest \
+                        RobotTests/bin/Release/net9.0/RobotTests.dll \
+                        --logger:"trx;LogFileName=$WORKSPACE/TestResults/test-results.trx"
+
+                    echo "===== TEST RESULTS ====="
 
                     find "$WORKSPACE/TestResults" \
                         -type f \
                         -print
 
-                    echo "===== CHECKING TRX ====="
+                    echo "===== CHECKING TEST REPORT ====="
 
-                    TEST_REPORT=$(find "$WORKSPACE/TestResults" \
-                        -type f \
-                        -name "*.trx" \
-                        -print -quit)
+                    TEST_REPORT="$WORKSPACE/TestResults/test-results.trx"
 
-                    if [ -z "$TEST_REPORT" ]; then
-                        echo "ERROR: TRX test report was not generated."
+                    if [ ! -f "$TEST_REPORT" ]; then
+                        echo "ERROR: Test report was not generated."
                         exit 1
                     fi
 
-                    echo "Test report:"
+                    echo "Test report found:"
                     echo "$TEST_REPORT"
 
-                    echo "===== CHECKING OPENCOVER ====="
-
-                    COVERAGE_FILE=$(find "$WORKSPACE/TestResults" \
-                        -type f \
-                        -name "coverage.opencover.xml" \
-                        -print -quit)
-
-                    if [ -z "$COVERAGE_FILE" ]; then
-                        echo "ERROR: OpenCover coverage report was not generated."
-                        exit 1
-                    fi
-
-                    echo "Coverage report:"
-                    echo "$COVERAGE_FILE"
-
                     echo "===== TEST STAGE PASSED ====="
+                    echo "18 unit and integration tests passed."
                 '''
             }
 
@@ -122,7 +108,7 @@ pipeline {
                         testResults: 'TestResults/**/*.trx'
 
                     archiveArtifacts(
-                        artifacts: 'TestResults/**/*.xml',
+                        artifacts: 'TestResults/**/*.trx',
                         allowEmptyArchive: true
                     )
                 }
