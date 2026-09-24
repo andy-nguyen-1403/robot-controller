@@ -135,16 +135,32 @@ pipeline {
                         sh """
                             set -e
 
-                            echo "Starting SonarQube analysis..."
+                            echo "===== SONARSCANNER DIRECTORY ====="
 
-                            rm -rf .sonarqube
-
-                            echo "SonarScanner location:"
                             echo "${scannerHome}"
+
+                            echo "===== FILES IN SONARSCANNER ====="
+
+                            find "${scannerHome}" -maxdepth 3 -type f -print
+
+                            echo "===== FIND SONARSCANNER EXECUTABLE ====="
+
+                            SCANNER=\$(find "${scannerHome}" \
+                                -type f \
+                                -name "dotnet-sonarscanner" \
+                                -print -quit)
+
+                            if [ -z "\$SCANNER" ]; then
+                                echo "ERROR: dotnet-sonarscanner executable was not found."
+                                exit 1
+                            fi
+
+                            echo "Scanner found:"
+                            echo "\$SCANNER"
 
                             echo "===== SONARQUBE BEGIN ====="
 
-                            "${scannerHome}/dotnet-sonarscanner" begin \
+                            "\$SCANNER" begin \
                                 /k:"robot-controller" \
                                 /d:sonar.host.url="\$SONAR_HOST_URL" \
                                 /d:sonar.token="\$SONAR_AUTH_TOKEN" \
@@ -160,7 +176,7 @@ pipeline {
 
                             echo "===== SONARQUBE END ====="
 
-                            "${scannerHome}/dotnet-sonarscanner" end \
+                            "\$SCANNER" end \
                                 /d:sonar.token="\$SONAR_AUTH_TOKEN"
 
                             echo "===== CODE QUALITY ANALYSIS COMPLETE ====="
