@@ -67,6 +67,10 @@ pipeline {
                     rm -rf TestResults
                     mkdir -p TestResults
 
+                    echo "===== RESTORE TEST PROJECT ====="
+
+                    dotnet restore RobotTests/RobotTests.csproj
+
                     echo "===== BUILD TEST PROJECT ====="
 
                     dotnet build RobotTests/RobotTests.csproj \
