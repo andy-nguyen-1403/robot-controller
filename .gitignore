@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# .NET
+bin/
+obj/
+
+# Visual Studio
+.vs/
+
+# SonarQube generated files
+.sonarqube/
+
+# Test results
+TestResults/
+
+# Security scan reports
+security-reports/
+
+# User-specific files
+*.user
+*.suo
