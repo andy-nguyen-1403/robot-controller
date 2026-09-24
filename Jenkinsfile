@@ -65,39 +65,62 @@ pipeline {
                     rm -rf TestResults
                     mkdir -p TestResults
 
-                    echo "Running unit and integration tests..."
+                    echo "===== RUNNING UNIT AND INTEGRATION TESTS ====="
 
                     dotnet test RobotTests/RobotTests.csproj \
                         --configuration Release \
                         --no-restore \
-                        --collect:"XPlat Code Coverage" \
-                        --results-directory TestResults \
                         --logger "trx;LogFileName=test-results.trx" \
-                        -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+                        --collect:"XPlat Code Coverage" \
+                        --settings coverlet.runsettings \
+                        --results-directory TestResults
 
-                    echo "===== COVERAGE FILES ====="
+                    echo "===== TEST RESULTS ====="
 
                     find TestResults \
                         -type f \
-                        -name "coverage.opencover.xml" \
                         -print
 
-                    echo "Checking coverage file exists..."
+                    echo "===== CHECKING TEST REPORT ====="
 
-                    test -n "$(find TestResults \
+                    TEST_REPORT=$(find TestResults \
                         -type f \
-                        -name 'coverage.opencover.xml' \
-                        -print -quit)"
+                        -name "*.trx" \
+                        -print -quit)
+
+                    if [ -z "$TEST_REPORT" ]; then
+                        echo "ERROR: Test report was not generated."
+                        exit 1
+                    fi
+
+                    echo "Test report found:"
+                    echo "$TEST_REPORT"
+
+                    echo "===== CHECKING COVERAGE REPORT ====="
+
+                    COVERAGE_FILE=$(find TestResults \
+                        -type f \
+                        -name "coverage.opencover.xml" \
+                        -print -quit)
+
+                    if [ -z "$COVERAGE_FILE" ]; then
+                        echo "ERROR: OpenCover coverage report was not generated."
+                        exit 1
+                    fi
+
+                    echo "Coverage report found:"
+                    echo "$COVERAGE_FILE"
 
                     echo "===== TESTS PASSED ====="
-                    echo "Automated tests and coverage collection passed."
+                    echo "18 unit and integration tests passed."
+                    echo "OpenCover coverage report generated successfully."
                 '''
             }
 
             post {
                 always {
                     junit allowEmptyResults: true,
-                          testResults: 'TestResults/**/*.trx'
+                        testResults: 'TestResults/**/*.trx'
 
                     archiveArtifacts(
                         artifacts: 'TestResults/**/*.xml',
