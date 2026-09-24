@@ -1,6 +1,6 @@
 services:
   robot-api:
-    image: robot-api:1.1.0
+    image: ${ROBOT_IMAGE}
     container_name: robot-api-production
     ports:
       - "8081:8080"
