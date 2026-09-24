@@ -136,35 +136,38 @@ pipeline {
                             set -e
 
                             echo "===== SONARSCANNER DIRECTORY ====="
-
                             echo "${scannerHome}"
 
-                            echo "===== FILES IN SONARSCANNER ====="
+                            echo "===== CHECK SONARSCANNER FILES ====="
 
-                            find "${scannerHome}" -maxdepth 3 -type f -print
-
-                            echo "===== FIND SONARSCANNER EXECUTABLE ====="
-
-                            SCANNER=\$(find "${scannerHome}" \
+                            find "${scannerHome}" \
+                                -maxdepth 2 \
                                 -type f \
-                                -name "dotnet-sonarscanner" \
-                                -print -quit)
+                                -name "*.dll" \
+                                -print
 
-                            if [ -z "\$SCANNER" ]; then
-                                echo "ERROR: dotnet-sonarscanner executable was not found."
+                            echo "===== CHECK SONARQUBE ENVIRONMENT ====="
+
+                            if [ -z "\$SONAR_HOST_URL" ]; then
+                                echo "ERROR: SONAR_HOST_URL is empty."
                                 exit 1
                             fi
 
-                            echo "Scanner found:"
-                            echo "\$SCANNER"
+                            if [ -z "\$SONAR_AUTH_TOKEN" ]; then
+                                echo "ERROR: SONAR_AUTH_TOKEN was not injected by Jenkins."
+                                echo "Please configure the SonarQube server credential in Jenkins."
+                                exit 1
+                            fi
+
+                            echo "SonarQube host: \$SONAR_HOST_URL"
+                            echo "SonarQube token: injected successfully"
 
                             echo "===== SONARQUBE BEGIN ====="
 
-                            "\$SCANNER" begin \
+                            dotnet "${scannerHome}/SonarScanner.MSBuild.dll" begin \
                                 /k:"robot-controller" \
                                 /d:sonar.host.url="\$SONAR_HOST_URL" \
-                                /d:sonar.token="\$SONAR_AUTH_TOKEN" \
-                                /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+                                /d:sonar.token="\$SONAR_AUTH_TOKEN"
 
                             echo "===== BUILD FOR SONARQUBE ====="
 
@@ -176,7 +179,7 @@ pipeline {
 
                             echo "===== SONARQUBE END ====="
 
-                            "\$SCANNER" end \
+                            dotnet "${scannerHome}/SonarScanner.MSBuild.dll" end \
                                 /d:sonar.token="\$SONAR_AUTH_TOKEN"
 
                             echo "===== CODE QUALITY ANALYSIS COMPLETE ====="
