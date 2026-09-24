@@ -62,72 +62,54 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "===== CLEANING TEST OUTPUT ====="
-
                     rm -rf TestResults
-                    rm -rf RobotTests/TestResults
-
                     mkdir -p TestResults
 
-                    echo "===== RUNNING TESTS ====="
+                    echo "===== RUNNING AUTOMATED TESTS ====="
 
                     dotnet test RobotTests/RobotTests.csproj \
                         --configuration Release \
                         --no-restore \
                         --logger "trx;LogFileName=test-results.trx" \
-                        --collect:"XPlat Code Coverage" \
-                        --settings coverlet.runsettings \
-                        --results-directory "$WORKSPACE/TestResults"
+                        --results-directory TestResults \
+                        /p:CollectCoverage=true \
+                        /p:CoverletOutput="$WORKSPACE/TestResults/coverage/" \
+                        /p:CoverletOutputFormat=opencover
 
-                    TEST_EXIT=$?
+                    echo "===== TEST OUTPUT ====="
 
-                    echo "dotnet test exit code: $TEST_EXIT"
-
-                    if [ "$TEST_EXIT" -ne 0 ]; then
-                        echo "ERROR: Automated tests failed."
-                        exit "$TEST_EXIT"
-                    fi
-
-                    echo "===== SEARCHING FOR TEST OUTPUT ====="
-
-                    echo "--- Workspace TestResults ---"
                     find "$WORKSPACE/TestResults" \
                         -type f \
-                        -print || true
+                        -print
 
-                    echo "--- RobotTests/TestResults ---"
-                    find "$WORKSPACE/RobotTests/TestResults" \
-                        -type f \
-                        -print 2>/dev/null || true
+                    echo "===== CHECKING TRX ====="
 
-                    echo "===== LOCATING TRX REPORT ====="
-
-                    TEST_REPORT=$(find "$WORKSPACE" \
+                    TEST_REPORT=$(find "$WORKSPACE/TestResults" \
                         -type f \
                         -name "*.trx" \
                         -print -quit)
 
                     if [ -z "$TEST_REPORT" ]; then
-                        echo "ERROR: No TRX test report was generated."
+                        echo "ERROR: TRX test report was not generated."
                         exit 1
                     fi
 
-                    echo "Test report found:"
+                    echo "Test report:"
                     echo "$TEST_REPORT"
 
-                    echo "===== LOCATING OPENCOVER REPORT ====="
+                    echo "===== CHECKING OPENCOVER ====="
 
-                    COVERAGE_FILE=$(find "$WORKSPACE" \
+                    COVERAGE_FILE=$(find "$WORKSPACE/TestResults" \
                         -type f \
                         -name "coverage.opencover.xml" \
                         -print -quit)
 
                     if [ -z "$COVERAGE_FILE" ]; then
-                        echo "ERROR: No OpenCover coverage report was generated."
+                        echo "ERROR: OpenCover coverage report was not generated."
                         exit 1
                     fi
 
-                    echo "Coverage report found:"
+                    echo "Coverage report:"
                     echo "$COVERAGE_FILE"
 
                     echo "===== TEST STAGE PASSED ====="
@@ -137,10 +119,10 @@ pipeline {
             post {
                 always {
                     junit allowEmptyResults: true,
-                        testResults: '**/*.trx'
+                        testResults: 'TestResults/**/*.trx'
 
                     archiveArtifacts(
-                        artifacts: '**/coverage.opencover.xml,**/*.trx',
+                        artifacts: 'TestResults/**/*.xml',
                         allowEmptyArchive: true
                     )
                 }
