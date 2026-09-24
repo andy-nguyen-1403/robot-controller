@@ -129,38 +129,43 @@ pipeline {
 
                 withSonarQubeEnv('SonarQube') {
 
-                    sh '''
-                        set -e
+                    script {
+                        def scannerHome = tool 'SonarScanner for .NET'
 
-                        echo "Starting SonarQube analysis..."
+                        sh """
+                            set -e
 
-                        rm -rf .sonarqube
+                            echo "Starting SonarQube analysis..."
 
-                        dotnet sonarscanner begin \
-                            /k:"robot-controller" \
-                            /d:sonar.host.url="$SONAR_HOST_URL" \
-                            /d:sonar.token="$SONAR_AUTH_TOKEN" \
-                            /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+                            rm -rf .sonarqube
 
-                        echo "Building RobotController for SonarQube..."
+                            echo "SonarScanner location:"
+                            echo "${scannerHome}"
 
-                        dotnet build RobotController/RobotController.csproj \
-                            --configuration Release \
-                            --no-restore
+                            echo "===== SONARQUBE BEGIN ====="
 
-                        echo "Building Robot API for SonarQube..."
+                            "${scannerHome}/dotnet-sonarscanner" begin \
+                                /k:"robot-controller" \
+                                /d:sonar.host.url="\$SONAR_HOST_URL" \
+                                /d:sonar.token="\$SONAR_AUTH_TOKEN" \
+                                /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
 
-                        dotnet build robot-api/robot-api.csproj \
-                            --configuration Release \
-                            --no-restore
+                            echo "===== BUILD FOR SONARQUBE ====="
 
-                        echo "Finishing SonarQube analysis..."
+                            dotnet build RobotController/RobotController.csproj \
+                                --configuration Release
 
-                        dotnet sonarscanner end \
-                            /d:sonar.token="$SONAR_AUTH_TOKEN"
+                            dotnet build robot-api/robot-api.csproj \
+                                --configuration Release
 
-                        echo "===== SONARQUBE ANALYSIS COMPLETE ====="
-                    '''
+                            echo "===== SONARQUBE END ====="
+
+                            "${scannerHome}/dotnet-sonarscanner" end \
+                                /d:sonar.token="\$SONAR_AUTH_TOKEN"
+
+                            echo "===== CODE QUALITY ANALYSIS COMPLETE ====="
+                        """
+                    }
                 }
             }
         }
