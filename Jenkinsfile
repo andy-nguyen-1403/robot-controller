@@ -310,13 +310,11 @@ pipeline {
                     echo "Releasing tested image to PRODUCTION..."
                     echo "Image: ${ROBOT_IMAGE}"
 
-                    docker compose \
-                        -p robot-production \
-                        -f robot-api/docker-compose.production.yml \
-                        down || true
+                    echo "===== STOPPING OLD PRODUCTION CONTAINER ====="
+                    docker rm -f robot-api-production || true
 
-                    ROBOT_IMAGE="${ROBOT_IMAGE}" \
-                    docker compose \
+                    echo "===== STARTING NEW PRODUCTION VERSION ====="
+                    ROBOT_IMAGE="${ROBOT_IMAGE}" docker compose \
                         -p robot-production \
                         -f robot-api/docker-compose.production.yml \
                         up -d
@@ -325,35 +323,24 @@ pipeline {
                     sleep 5
 
                     echo "===== PRODUCTION CONTAINER ====="
-
                     docker compose \
                         -p robot-production \
                         -f robot-api/docker-compose.production.yml \
                         ps
 
                     echo "===== PRODUCTION HEALTH CHECK ====="
-
-                    curl --fail --silent \
-                        http://localhost:${PRODUCTION_PORT}/health
-
+                    curl --fail --silent http://localhost:${PRODUCTION_PORT}/health
                     echo
 
                     echo "===== PRODUCTION ROOT CHECK ====="
-
-                    curl --fail --silent \
-                        http://localhost:${PRODUCTION_PORT}/
-
+                    curl --fail --silent http://localhost:${PRODUCTION_PORT}/
                     echo
 
-                    echo "===== PRODUCTION COMMAND CHECK ====="
-
-                    curl --fail --silent \
-                        http://localhost:${PRODUCTION_PORT}/robot-commands
-
+                    echo "===== PRODUCTION ROBOT COMMAND CHECK ====="
+                    curl --fail --silent http://localhost:${PRODUCTION_PORT}/robot-commands
                     echo
 
-                    echo "===== PRODUCTION RELEASE PASSED ====="
-                    echo "Released image: ${ROBOT_IMAGE}"
+                    echo "===== RELEASE PASSED ====="
                 '''
             }
         }
