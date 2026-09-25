@@ -62,34 +62,31 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "===== CLEAN TEST OUTPUT ====="
-
                     rm -rf TestResults
-                    mkdir -p TestResults
+                    mkdir -p TestResults/coverage
 
-                    echo "===== RESTORE TEST PROJECT ====="
-
+                    echo "===== RESTORING TEST PROJECT ====="
                     dotnet restore RobotTests/RobotTests.csproj
 
-                    echo "===== BUILD TEST PROJECT ====="
-
+                    echo "===== BUILDING TEST PROJECT ====="
                     dotnet build RobotTests/RobotTests.csproj \
                         --configuration Release \
                         --no-restore
 
-                    echo "===== RUNNING UNIT AND INTEGRATION TESTS ====="
+                    echo "===== RUNNING TESTS + COVERAGE ====="
 
-                    dotnet vstest \
-                        RobotTests/bin/Release/net9.0/RobotTests.dll \
-                        --logger:"trx;LogFileName=$WORKSPACE/TestResults/test-results.trx"
+                    dotnet test RobotTests/RobotTests.csproj \
+                        --configuration Release \
+                        --no-build \
+                        --no-restore \
+                        --logger "trx;LogFileName=test-results.trx" \
+                        --results-directory TestResults \
+                        /p:CollectCoverage=true \
+                        /p:CoverletOutput="$WORKSPACE/TestResults/coverage/" \
+                        /p:CoverletOutputFormat=opencover
 
                     echo "===== TEST RESULTS ====="
-
-                    find "$WORKSPACE/TestResults" \
-                        -type f \
-                        -print
-
-                    echo "===== CHECKING TEST REPORT ====="
+                    find "$WORKSPACE/TestResults" -type f -print
 
                     TEST_REPORT="$WORKSPACE/TestResults/test-results.trx"
 
@@ -98,11 +95,20 @@ pipeline {
                         exit 1
                     fi
 
+                    COVERAGE_REPORT="$WORKSPACE/TestResults/coverage/coverage.opencover.xml"
+
+                    if [ ! -f "$COVERAGE_REPORT" ]; then
+                        echo "ERROR: Coverage report was not generated."
+                        exit 1
+                    fi
+
                     echo "Test report found:"
                     echo "$TEST_REPORT"
 
+                    echo "Coverage report found:"
+                    echo "$COVERAGE_REPORT"
+
                     echo "===== TEST STAGE PASSED ====="
-                    echo "18 unit and integration tests passed."
                 '''
             }
 
@@ -112,7 +118,7 @@ pipeline {
                         testResults: 'TestResults/**/*.trx'
 
                     archiveArtifacts(
-                        artifacts: 'TestResults/**/*.trx',
+                        artifacts: 'TestResults/**/*.trx,TestResults/coverage/**/*.xml',
                         allowEmptyArchive: true
                     )
                 }
@@ -167,7 +173,9 @@ pipeline {
                             dotnet "${scannerHome}/SonarScanner.MSBuild.dll" begin \
                                 /k:"robot-controller" \
                                 /d:sonar.host.url="\$SONAR_HOST_URL" \
-                                /d:sonar.token="\$SONAR_AUTH_TOKEN"
+                                /d:sonar.token="\$SONAR_AUTH_TOKEN" \
+                                /d:sonar.cs.opencover.reportsPaths="\$WORKSPACE/TestResults/coverage/coverage.opencover.xml"
+                                /d:sonar.coverage.exclusions="**/DTOs/**/*.cs,**/CommandProviders/**/*.cs,**/Program.cs"
 
                             echo "===== BUILD FOR SONARQUBE ====="
 
