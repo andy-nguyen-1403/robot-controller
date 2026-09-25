@@ -175,7 +175,6 @@ pipeline {
                                 /d:sonar.host.url="\$SONAR_HOST_URL" \
                                 /d:sonar.token="\$SONAR_AUTH_TOKEN" \
                                 /d:sonar.cs.opencover.reportsPaths="\$WORKSPACE/TestResults/coverage/coverage.opencover.xml"
-                                /d:sonar.coverage.exclusions="**/DTOs/**/*.cs,**/CommandProviders/**/*.cs,**/Program.cs"
 
                             echo "===== BUILD FOR SONARQUBE ====="
 
