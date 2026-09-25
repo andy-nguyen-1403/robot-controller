@@ -8,7 +8,7 @@ pipeline {
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         ROBOT_IMAGE = "robot-api:build-${BUILD_NUMBER}"
 
-        STAGING_PORT = "8080"
+        STAGING_PORT = "8082"
         PRODUCTION_PORT = "8081"
     }
 

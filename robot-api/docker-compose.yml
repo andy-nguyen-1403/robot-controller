@@ -3,7 +3,7 @@ services:
     image: ${ROBOT_IMAGE}
     container_name: robot-api-staging
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_HTTP_PORTS: 8080
